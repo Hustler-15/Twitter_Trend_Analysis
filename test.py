@@ -52,7 +52,7 @@ def scrape_and_save_trending_hashtags(filename="trending_hashtags.txt"):
             # Find the span that contains the actual trend text
             trend_text_element = trend.find_elements(By.CSS_SELECTOR, 'span')
             trend_text = trend_text_element[3].text.strip()
-            print(trend.get_attribute('outerHTML'))
+            #print(trend.get_attribute('outerHTML'))
             print(f"Raw trend text: '{trend_text}'")  # Debug output
             
             # Validate and filter the trend text
@@ -74,38 +74,64 @@ def scrape_and_save_trending_hashtags(filename="trending_hashtags.txt"):
     return trends_data    
 
 # Function to scrape tweets for a specific trend
+def scrape_and_save_trending_hashtags(filename="trending_hashtags.txt"):
+    driver.get("https://twitter.com/explore/tabs/trending")
+    time.sleep(5)
+
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(3)
+
+    trending = driver.find_elements(By.CSS_SELECTOR, 'div[data-testid="trend"]')
+    if not trending:
+        print("No trending topics found.")
+        return []
+
+    trends_data = []
+    for trend in trending[:30]:
+        try:
+            trend_text_elements = trend.find_elements(By.CSS_SELECTOR, 'span')
+            trend_text = trend_text_elements[3].text.strip() if len(trend_text_elements) > 3 else None
+            if trend_text and not trend_text.isdigit() and trend_text != ".":
+                trends_data.append(trend_text)
+        except Exception as e:
+            print("Error retrieving trend text:", e)
+
+    if trends_data:
+        with open(filename, "w", encoding="utf-8") as file:
+            for trend in trends_data:
+                file.write(f"{trend}\n")
+    return trends_data    
+
+# Function to scrape tweets for a specific trend
 def scrape_tweets_for_hashtag(hashtag, max_tweets=3000):
-    # URL-encode the hashtag for proper handling of special characters
     encoded_hashtag = urllib.parse.quote_plus(f"#{hashtag}")
     driver.get(f"https://twitter.com/search?q={encoded_hashtag}&f=top")
-    time.sleep(5)  # Wait for the tweets to load
+    time.sleep(5)
 
     tweets_data = []
     last_height = driver.execute_script("return document.body.scrollHeight")
 
     while len(tweets_data) < max_tweets:
-        # Collect the tweets currently loaded
         tweets = driver.find_elements(By.XPATH, '//article')
-        
-        # Iterate through the loaded tweets
+
         for tweet in tweets:
-            tweet_content = tweet.text
             try:
-                username = tweet.find_element(By.XPATH, './/span[contains(text(),"@")]').text  # Extract username
-                created_at = tweet.find_element(By.XPATH, './/time').get_attribute('datetime')  # Extract timestamp
+                tweet_content = tweet.text
+                username = tweet.find_element(By.XPATH, './/span[contains(text(),"@")]').text
+                created_at = tweet.find_element(By.XPATH, './/time').get_attribute('datetime')
+
+                # Retrieve counts using alternative methods and add fallbacks
+                retweet_count = tweet.find_element(By.XPATH, './/div[@data-testid="retweet"]').text or "0"
+                like_count = tweet.find_element(By.XPATH, './/div[@data-testid="like"]').text or "0"
+                reply_count = tweet.find_element(By.XPATH, './/div[@data-testid="reply"]').text or "0"
                 
-                # Extract retweet, like, reply, and quote counts, with a fallback to 0
-                retweet_count = tweet.find_element(By.XPATH, './/div[@data-testid="retweet"]').text if tweet.find_elements(By.XPATH, './/div[@data-testid="retweet"]') else "0"
-                like_count = tweet.find_element(By.XPATH, './/div[@data-testid="like"]').text if tweet.find_elements(By.XPATH, './/div[@data-testid="like"]') else "0"
-                reply_count = tweet.find_element(By.XPATH, './/div[@data-testid="reply"]').text if tweet.find_elements(By.XPATH, './/div[@data-testid="reply"]') else "0"
-                quote_count = tweet.find_element(By.XPATH, './/div[@data-testid="quote"]').text if tweet.find_elements(By.XPATH, './/div[@data-testid="quote"]') else "0"
-                
-                # Placeholder values for geo_location, source, user_followers_count, and user_verified
-                geo_location = "Not available"  # Replace with actual logic if you want to capture geo info
-                source = "Twitter Web"  # Placeholder, you may want to refine this based on actual tweet source
-                user_followers_count = "Not available"  # Replace with logic to get user followers count
-                user_verified = False  # Replace with logic to check if user is verified
-                
+                # Handle case where counts may show as empty if they are zero
+                retweet_count = int(retweet_count) if retweet_count else 0
+                like_count = int(like_count) if like_count else 0
+                reply_count = int(reply_count) if reply_count else 0
+                quote_count = "Not available"  # Replace with logic if quote count can be found
+
+                # Collect other details as required
                 tweets_data.append({
                     'username': username,
                     'tweet_content': tweet_content,
@@ -115,28 +141,26 @@ def scrape_tweets_for_hashtag(hashtag, max_tweets=3000):
                     'reply_count': reply_count,
                     'quote_count': quote_count,
                     'hashtag': f"#{hashtag}",
-                    'language': "Not available",  # Placeholder for language detection
-                    'geo_location': geo_location,
-                    'source': source,
-                    'user_followers_count': user_followers_count,
-                    'user_verified': user_verified,
-                    'url': f"https://twitter.com/{username}/status/{tweet.get_attribute('data-tweet-id')}"  # Construct tweet URL
+                    'geo_location': "Not available",
+                    'source': "Twitter Web",
+                    'user_followers_count': "Not available",
+                    'user_verified': False,
+                    'url': f"https://twitter.com/{username}/status/{tweet.get_attribute('data-tweet-id')}"
                 })
-                
-                # Stop if we've reached the desired number of tweets
+
                 if len(tweets_data) >= max_tweets:
                     break
 
             except Exception as e:
                 print("Error processing tweet:", e)
 
-        # Scroll down to load more tweets
+        # Scroll to load more tweets
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(7)  # Wait for new tweets to load
+        time.sleep(7)
 
-        # Calculate new scroll height and compare with last height
+        # Check if new tweets are loaded
         new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:  # If no new tweets are loaded, stop
+        if new_height == last_height:
             break
         last_height = new_height
 
@@ -179,7 +203,7 @@ password = "badeloghkrtehonge"
 login_to_twitter(username, password)
 
 # Scrape trending topics
-trending_topics = scrape_and_save_trending_hashtags()
+trending_topics = ["Ajaz Patel", "Coach", "Complete Guru Sant Rampalji", "Dravid", "फातिमा खान", "Hostspot", "भारतीय क्रिकेट टीम", "टीम इंडिया", "Sachin"]
 print("Trending Topics:")
 for hashtag in trending_topics:
     print(f"Trend: {hashtag}" )
@@ -192,4 +216,3 @@ for hashtag in trending_topics:
 
 # Close the WebDriver
 driver.quit()
-
