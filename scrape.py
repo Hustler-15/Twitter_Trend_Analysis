@@ -14,13 +14,19 @@ import re
 driver = webdriver.Chrome()
 
 # Function to log in to Twitter
-def login_to_twitter(username, password):
+def login_to_twitter(username, password, phone):
     driver.get("https://twitter.com/login")
     time.sleep(3)  # Wait for the login page to load
 
     # Enter username
     username_input = driver.find_element(By.NAME, "text")
     username_input.send_keys(username)
+    username_input.send_keys(Keys.RETURN)
+    time.sleep(3)  # Wait for the next page to load
+
+    # Enter number if asked
+    username_input = driver.find_element(By.NAME, "text")
+    username_input.send_keys(phone)
     username_input.send_keys(Keys.RETURN)
     time.sleep(3)  # Wait for the next page to load
 
@@ -148,15 +154,6 @@ def save_to_csv(data, filename):
     print(f"Data saved to {filename}")
 
 def transliterate_to_english(text):
-    """
-    Automatically detects the language of the given text and transliterates it to English.
-
-    Parameters:
-    text (str): The text to be transliterated.
-
-    Returns:
-    str: The transliterated text in English or an error message.
-    """
     translator = Translator()
     try:
         # Detect the language of the input text
@@ -174,9 +171,10 @@ def transliterate_to_english(text):
 # Replace with your Twitter username and password
 username = "Hustler_644531"
 password = "badeloghkrtehonge"
+phone = "9372691221"
 
 # Log in to Twitter
-login_to_twitter(username, password)
+login_to_twitter(username, password, phone)
 
 # Scrape trending topics
 trending_topics = scrape_and_save_trending_hashtags()
@@ -188,7 +186,7 @@ for hashtag in trending_topics:
     tweets_data = scrape_tweets_for_hashtag(hashtag, max_tweets=100)
 
     # Save tweets data to CSV
-    save_to_csv(tweets_data, f"{transliterate_to_english(hashtag)}_tweets.csv")
+    save_to_csv(tweets_data, f"data\\{transliterate_to_english(hashtag)}_tweets.csv")
 
 # Close the WebDriver
 driver.quit()
