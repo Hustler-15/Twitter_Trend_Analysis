@@ -1,0 +1,23 @@
+Twitter Trend Analysis Using LLM
+
+In the context of analyzing trends on Twitter, the project aims to develop a comprehensive system that utilizes LLM, a powerful language model, to extract, analyze, and predict trending topics based on user-generated content. The following outlines the key components and objectives of the project:
+
+
+
+Objectives
+
+
+1.Trend Identification:
+ The primary objective is to identify and classify trending topics on Twitter in real-time. This involves analyzing large volumes of tweets to determine which topics are gaining traction among users.
+
+2.Sentiment Analysis:
+ Alongside trend identification, the project will incorporate sentiment analysis to assess public opinion regarding trending topics. This includes categorizing sentiments as positive, negative, or neutral based on the content of tweets.
+
+
+Understanding the dataset:
+
+A dataset of tweets using Twitter's API, focusing on keywords related to current events, news, and social phenomena.
+The dataset is diverse and includes various topics to enhance the model's robustness.
+
+
+
